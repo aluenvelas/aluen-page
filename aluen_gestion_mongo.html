@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALUEN · Gestión</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#F8F3EC;--cream-dark:#EDE5D8;--cream-mid:#F2EBE0;
+  --black:#1A1714;--black-soft:#2E2A26;
+  --gold:#C9A96E;--gold-light:#E8D5B0;--gold-pale:#F5EDD8;
+  --smoke:#8C7B6B;--smoke-light:#B8ADA3;
+  --white:#FDFAF6;
+  --green:#0F6E56;--green-light:#E1F5EE;
+  --red:#993C1D;--red-light:#FAECE7;
+  --blue:#185FA5;--blue-light:#E6F1FB;
+  --purple:#534AB7;--purple-light:#EEEDFE;
+  --amber:#854F0B;--amber-light:#FAEEDA;
+  --sidebar:220px;--radius:8px;
+}
+html{font-size:14px}
+body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--black);display:flex;min-height:100vh}
+
+.sidebar{width:var(--sidebar);background:var(--black);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:50}
+.sb-brand{padding:28px 24px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-brand-name{font-family:'Playfair Display',serif;font-size:26px;color:var(--white)}
+.sb-brand-sub{font-size:10px;color:var(--smoke-light);letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+.sb-nav{flex:1;padding:16px 0;overflow-y:auto}
+.sb-section{font-size:9px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--smoke);padding:16px 24px 6px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 24px;cursor:pointer;color:var(--smoke-light);font-size:13px;border:none;background:none;width:100%;text-align:left;transition:all .15s}
+.sb-item svg{flex-shrink:0;opacity:.7}
+.sb-item:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.sb-item.active{color:var(--gold);background:rgba(201,169,110,.1)}
+.sb-item.active svg{opacity:1}
+.sb-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.08)}
+.sb-date{font-size:11px;color:var(--smoke);line-height:1.5}
+.api-status{display:flex;align-items:center;gap:6px;font-size:10px;margin-top:8px}
+.api-dot{width:7px;height:7px;border-radius:50%;background:var(--smoke)}
+.api-dot.ok{background:#22c55e}
+.api-dot.err{background:var(--red)}
+
+.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column}
+.topbar{background:var(--white);border-bottom:1px solid var(--cream-dark);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:400}
+.topbar-actions{display:flex;gap:10px;align-items:center}
+.btn{padding:8px 18px;border-radius:var(--radius);font-size:12px;font-weight:500;cursor:pointer;border:none;transition:all .15s;font-family:'Inter',sans-serif}
+.btn-primary{background:var(--black);color:var(--white)}
+.btn-primary:hover{background:var(--black-soft)}
+.btn-gold{background:var(--gold);color:var(--white)}
+.btn-ghost{background:transparent;color:var(--smoke);border:1px solid var(--cream-dark)}
+.btn-ghost:hover{border-color:var(--smoke-light);color:var(--black)}
+.btn-danger{background:var(--red-light);color:var(--red)}
+.btn-danger:hover{background:var(--red);color:#fff}
+.btn-sm{padding:5px 12px;font-size:11px;border-radius:6px}
+.content{padding:28px 32px;flex:1}
+
+.view{display:none}
+.view.active{display:block}
+
+/* Loading */
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--smoke);font-style:italic;font-size:13px;gap:10px}
+.spinner{width:18px;height:18px;border:2px solid var(--cream-dark);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+.kpi-card{background:var(--white);border:1px solid var(--cream-dark);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.k-gold::before{background:var(--gold)}
+.kpi-card.k-green::before{background:var(--green)}
+.kpi-card.k-blue::before{background:var(--blue)}
+.kpi-card.k-red::before{background:var(--red)}
+.kpi-card.k-purple::before{background:var(--purple)}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--smoke);margin-bottom:8px}
+.kpi-value{font-family:'Playfair Display',serif;font-size:28px;font-weight:400;line-height:1;margin-bottom:4px}
+.kpi-sub{font-size:11px;color:var(--smoke)}
+
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-head h3{font-family:'Playfair Display',serif;font-size:18px;font-weight:400}
+.table-wrap{background:var(--white);border:1px solid var(--cream-dark);border-radius:var(--radius);overflow:hidden;margin-bottom:24px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:var(--black)}
+thead th{color:var(--white);padding:11px 14px;text-align:left;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--cream-dark);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--cream)}
+tbody td{padding:11px 14px;color:var(--black-soft);vertical-align:middle}
+.empty-row td{text-align:center;color:var(--smoke);padding:32px;font-style:italic}
+
+.pill{display:inline-block;font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px}
+.pill-pend{background:#FEF3C7;color:#92400E}
+.pill-proc{background:var(--blue-light);color:var(--blue)}
+.pill-done{background:var(--green-light);color:var(--green)}
+.pill-cancel{background:var(--red-light);color:var(--red)}
+.pill-ok{background:var(--green-light);color:var(--green)}
+.pill-low{background:var(--amber-light);color:var(--amber)}
+.pill-out{background:var(--red-light);color:var(--red)}
+.badge-neutral{background:var(--cream-dark);color:var(--smoke)}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,23,20,.55);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:12px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-head{padding:24px 24px 0;display:flex;justify-content:space-between;align-items:flex-start}
+.modal-head h3{font-family:'Playfair Display',serif;font-size:20px;font-weight:400}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--smoke)}
+.modal-body{padding:20px 24px 24px;display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--smoke)}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;border:1px solid var(--cream-dark);border-radius:6px;font-family:'Inter',sans-serif;font-size:13px;background:var(--cream);color:var(--black);outline:none;transition:border .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold)}
+.field textarea{resize:vertical;min-height:60px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-footer{padding:0 24px 20px;display:flex;gap:10px;justify-content:flex-end}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--black);color:var(--white);padding:12px 20px;border-radius:8px;font-size:13px;z-index:300;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.toast-ok{border-left:3px solid var(--gold)}
+.toast.toast-err{border-left:3px solid var(--red)}
+
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-card{background:var(--white);border:1px solid var(--cream-dark);border-radius:var(--radius);padding:20px}
+.chart-title{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--smoke);margin-bottom:16px}
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:flex;align-items:center;gap:10px;font-size:12px}
+.bar-label{width:120px;color:var(--smoke);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.bar-track{flex:1;height:16px;background:var(--cream-dark);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s ease;background:var(--gold)}
+.bar-val{width:70px;text-align:right;color:var(--black-soft);font-weight:500;flex-shrink:0}
+
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+.inv-card{background:var(--white);border:1px solid var(--cream-dark);border-radius:var(--radius);padding:16px}
+.inv-card-name{font-weight:500;font-size:14px;margin-bottom:4px}
+.inv-card-cat{font-size:10px;color:var(--smoke);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+.inv-qty{font-family:'Playfair Display',serif;font-size:32px;line-height:1;margin-bottom:4px}
+.inv-unit{font-size:11px;color:var(--smoke)}
+.inv-card-actions{display:flex;gap:6px;margin-top:12px}
+
+.filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.filter-select,.search-box{padding:7px 12px;border:1px solid var(--cream-dark);border-radius:6px;font-size:12px;background:var(--white);color:var(--black);outline:none}
+.filter-select:focus,.search-box:focus{border-color:var(--gold)}
+.search-box{min-width:180px}
+.act-btn{background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:4px;font-size:12px;transition:background .1s}
+.act-btn:hover{background:var(--cream-dark)}
+
+@media(max-width:768px){
+  .sidebar{width:60px}.sb-brand-name,.sb-brand-sub,.sb-section,.sb-item span,.sb-footer{display:none}
+  .sb-item{justify-content:center;padding:14px}.main{margin-left:60px}
+  .kpi-grid{grid-template-columns:1fr 1fr}.chart-grid{grid-template-columns:1fr}
+  .content{padding:16px}.topbar{padding:0 16px}
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-brand-name">ALUEN</div>
+    <div class="sb-brand-sub">Gestión operacional</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-section">Principal</div>
+    <button class="sb-item active" onclick="showView('dashboard')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Dashboard</span>
+    </button>
+    <div class="sb-section">Operación</div>
+    <button class="sb-item" onclick="showView('pedidos')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+      <span>Pedidos</span>
+    </button>
+    <button class="sb-item" onclick="showView('ventas')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>Ventas</span>
+    </button>
+    <button class="sb-item" onclick="showView('inventario')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 7H4a1 1 0 00-1 1v10a1 1 0 001 1h16a1 1 0 001-1V8a1 1 0 00-1-1z"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><path d="M12 12v4M10 14h4"/></svg>
+      <span>Inventario</span>
+    </button>
+    <button class="sb-item" onclick="showView('productos')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+      <span>Productos</span>
+    </button>
+    <div class="sb-section">Análisis</div>
+    <button class="sb-item" onclick="showView('kpis')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>KPIs</span>
+    </button>
+  </nav>
+  <div class="sb-footer">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:26px;height:26px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--black);">A</div>
+        <span id="sb-username" style="font-size:12px;color:var(--white);font-weight:500;">aluen_admin</span>
+      </div>
+      <button onclick="doLogout()" title="Cerrar sesion"
+        style="background:none;border:none;cursor:pointer;color:var(--smoke-light);font-size:16px;padding:2px 4px;border-radius:4px;transition:color .15s;"
+        onmouseover="this.style.color='var(--red-light)'" onmouseout="this.style.color='var(--smoke-light)'">&#x23CF;</button>
+    </div>
+    <div class="sb-date" id="sb-date"></div>
+    <div class="api-status"><div class="api-dot" id="api-dot"></div><span id="api-status-txt" style="color:var(--smoke);font-size:10px">Conectando…</span></div>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-actions" id="topbar-actions"></div>
+  </header>
+  <div class="content">
+
+    <div class="view active" id="view-dashboard">
+      <div class="kpi-grid" id="dash-kpis"><div class="loading"><div class="spinner"></div>Cargando datos…</div></div>
+      <div class="chart-grid" id="dash-charts"></div>
+      <div class="section-head"><h3>Pedidos recientes</h3></div>
+      <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Producto</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead><tbody id="dash-orders-body"><tr class="empty-row"><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
+    </div>
+
+    <div class="view" id="view-pedidos">
+      <div class="filters">
+        <input class="search-box" placeholder="Buscar cliente…" oninput="renderPedidos()" id="search-pedidos">
+        <select class="filter-select" onchange="renderPedidos()" id="filter-estado">
+          <option value="">Todos los estados</option>
+          <option>Pendiente</option><option>En proceso</option><option>Entregado</option><option>Cancelado</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Producto</th><th>Cant.</th><th>Total</th><th>Canal</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="pedidos-body"><tr class="empty-row"><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="view" id="view-ventas">
+      <div class="filters">
+        <select class="filter-select" onchange="renderVentas()" id="filter-mes"><option value="">Todos los meses</option></select>
+        <select class="filter-select" onchange="renderVentas()" id="filter-canal-v">
+          <option value="">Todos los canales</option>
+          <option>Instagram</option><option>WhatsApp</option><option>Feria</option><option>Referido</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="kpi-grid" id="ventas-kpis"></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Producto</th><th>Cant.</th><th>Precio unit.</th><th>Total</th><th>Canal</th></tr></thead>
+        <tbody id="ventas-body"></tbody>
+      </table></div>
+    </div>
+
+    <div class="view" id="view-inventario">
+      <div class="filters">
+        <select class="filter-select" onchange="renderInventario()" id="filter-cat-inv">
+          <option value="">Todas las categorías</option>
+          <option>Materia prima</option><option>Producto terminado</option><option>Empaque</option><option>Accesorio</option>
+        </select>
+      </div>
+      <div class="inv-grid" id="inv-grid"><div class="loading"><div class="spinner"></div>Cargando inventario…</div></div>
+    </div>
+
+    <div class="view" id="view-productos">
+      <div class="table-wrap"><table>
+        <thead><tr><th>Producto</th><th>Categoría</th><th>Costo</th><th>Precio venta</th><th>Margen</th><th>Acciones</th></tr></thead>
+        <tbody id="productos-body"><tr class="empty-row"><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="view" id="view-kpis">
+      <div class="kpi-grid" id="kpi-grid-full"><div class="loading"><div class="spinner"></div>Calculando indicadores…</div></div>
+      <div class="chart-grid" id="kpi-charts"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL PEDIDO -->
+<div class="modal-overlay" id="modal-pedido">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modal-pedido-title">Nuevo pedido</h3><button class="modal-close" onclick="closeModal('modal-pedido')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="pedido-edit-id">
+      <div class="field-row">
+        <div class="field"><label>Fecha</label><input type="date" id="p-fecha"></div>
+        <div class="field"><label>Estado</label><select id="p-estado"><option>Pendiente</option><option>En proceso</option><option>Entregado</option><option>Cancelado</option></select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Cliente</label><input id="p-cliente" placeholder="Nombre completo"></div>
+        <div class="field"><label>Teléfono</label><input id="p-telefono" placeholder="3001234567"></div>
+      </div>
+      <div class="field"><label>Producto</label><select id="p-producto"><option value="">— Selecciona —</option></select></div>
+      <div class="field-row">
+        <div class="field"><label>Cantidad</label><input type="number" id="p-cantidad" min="1" value="1" oninput="calcPedidoTotal()"></div>
+        <div class="field"><label>Precio unitario (COP)</label><input type="number" id="p-precio" placeholder="0" oninput="calcPedidoTotal()"></div>
+      </div>
+      <div class="field"><label>Total</label><input id="p-total" readonly style="background:var(--cream-dark);font-weight:600"></div>
+      <div class="field"><label>Canal</label><select id="p-canal"><option>Instagram</option><option>WhatsApp</option><option>Feria</option><option>Referido</option><option>Otro</option></select></div>
+      <div class="field"><label>Notas</label><textarea id="p-notas" placeholder="Personalización, dirección…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pedido')">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePedido()">Guardar pedido</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL INVENTARIO -->
+<div class="modal-overlay" id="modal-inventario">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modal-inv-title">Nuevo ítem</h3><button class="modal-close" onclick="closeModal('modal-inventario')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="inv-edit-id">
+      <div class="field"><label>Nombre</label><input id="inv-nombre" placeholder="Ej. Cera de soja"></div>
+      <div class="field-row">
+        <div class="field"><label>Categoría</label><select id="inv-cat"><option>Materia prima</option><option>Producto terminado</option><option>Empaque</option><option>Accesorio</option></select></div>
+        <div class="field"><label>Unidad</label><input id="inv-unidad" placeholder="kg, unidades, ml"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Cantidad</label><input type="number" id="inv-qty" min="0" value="0"></div>
+        <div class="field"><label>Mínimo alerta</label><input type="number" id="inv-min" min="0" value="5"></div>
+      </div>
+      <div class="field"><label>Costo unitario (COP)</label><input type="number" id="inv-costo" placeholder="0"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-inventario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveInventario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRODUCTO -->
+<div class="modal-overlay" id="modal-producto">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modal-prod-title">Nuevo producto</h3><button class="modal-close" onclick="closeModal('modal-producto')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="prod-edit-id">
+      <div class="field"><label>Nombre</label><input id="prod-nombre" placeholder="Ej. Vela Andina – Café"></div>
+      <div class="field"><label>Categoría</label><input id="prod-cat" placeholder="Ej. Línea Básica, Regalo, Premium"></div>
+      <div class="field-row">
+        <div class="field"><label>Costo producción (COP)</label><input type="number" id="prod-costo" placeholder="0" oninput="calcMargen()"></div>
+        <div class="field"><label>Precio de venta (COP)</label><input type="number" id="prod-precio" placeholder="0" oninput="calcMargen()"></div>
+      </div>
+      <div class="field"><label>Margen estimado</label><input id="prod-margen" readonly style="background:var(--cream-dark);font-weight:600"></div>
+      <div class="field"><label>Descripción</label><textarea id="prod-desc" placeholder="Fragancia, tamaño, tiempo de quema…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-producto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProducto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--black);z-index:999;align-items:center;justify-content:center;flex-direction:column;">
+  <div style="width:100%;max-width:380px;padding:24px;">
+    <div style="text-align:center;margin-bottom:32px;padding-top:48px;">
+      <div style="position:relative;display:inline-block;">
+        <div style="position:absolute;top:-46px;left:50%;transform:translateX(-50%);">
+          <div style="width:50px;height:50px;background:rgba(249,200,80,.15);border-radius:50%;position:absolute;top:-10px;left:50%;transform:translateX(-50%);animation:gpulse 2s ease-in-out infinite alternate;"></div>
+          <div style="width:18px;height:32px;background:rgba(249,160,60,.5);border-radius:50% 50% 30% 30%/60% 60% 40% 40%;position:absolute;top:-4px;left:50%;transform:translateX(-50%);animation:lflick 2.2s ease-in-out infinite alternate-reverse;transform-origin:bottom center;"></div>
+          <div style="width:11px;height:22px;background:#f9e07a;border-radius:50% 50% 30% 30%/60% 60% 40% 40%;margin:0 auto;animation:lflick 1.8s ease-in-out infinite alternate;transform-origin:bottom center;"></div>
+        </div>
+        <div style="width:32px;height:88px;background:linear-gradient(to right,#d4b896,#f0dfc4,#d4b896);border-radius:4px 4px 2px 2px;margin:0 auto;position:relative;">
+          <div style="width:2px;height:14px;background:#5a3a1a;position:absolute;top:-14px;left:50%;transform:translateX(-50%);border-radius:1px;"></div>
+        </div>
+      </div>
+    </div>
+    <h1 style="font-family:'Playfair Display',serif;font-size:42px;color:var(--white);text-align:center;margin-bottom:4px;">ALUEN</h1>
+    <p style="text-align:center;font-size:11px;color:var(--smoke-light);letter-spacing:.16em;text-transform:uppercase;margin-bottom:40px;">Sistema de gestion</p>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--smoke-light);display:block;margin-bottom:6px;">Usuario</label>
+        <input id="login-user" type="text" placeholder="aluen_admin" autocomplete="username"
+          style="width:100%;padding:12px 16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--white);font-size:14px;font-family:Inter,sans-serif;outline:none;transition:border .2s;"
+          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      </div>
+      <div style="position:relative;">
+        <label style="font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--smoke-light);display:block;margin-bottom:6px;">Contrasena</label>
+        <input id="login-pass" type="password" placeholder="&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;" autocomplete="current-password"
+          style="width:100%;padding:12px 16px;padding-right:44px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--white);font-size:14px;font-family:Inter,sans-serif;outline:none;transition:border .2s;"
+          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"
+          onkeydown="if(event.key==='Enter')doLogin()">
+        <button onclick="togglePass()" style="position:absolute;right:12px;bottom:11px;background:none;border:none;cursor:pointer;color:var(--smoke-light);font-size:15px;">&#128065;</button>
+      </div>
+      <div id="login-error" style="display:none;background:var(--red-light);color:var(--red);padding:10px 14px;border-radius:6px;font-size:12px;border-left:3px solid var(--red);"></div>
+      <button onclick="doLogin()" id="login-btn"
+        style="width:100%;padding:14px;background:var(--gold);color:var(--black);border:none;border-radius:8px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;letter-spacing:.06em;cursor:pointer;margin-top:4px;transition:opacity .2s;">
+        Ingresar
+      </button>
+    </div>
+    <p style="text-align:center;font-size:11px;color:var(--smoke);margin-top:32px;">Acceso protegido &middot; ALUEN &copy; 2024</p>
+  </div>
+</div>
+
+<style>
+@keyframes lflick{0%{transform:translateX(-50%) rotate(-1deg) scaleX(1)}50%{transform:translateX(-50%) rotate(1deg) scaleX(.92)}100%{transform:translateX(-50%) rotate(-.5deg) scaleX(1.05)}}
+@keyframes gpulse{from{opacity:.4;transform:translateX(-50%) scale(1)}to{opacity:.9;transform:translateX(-50%) scale(1.4)}}
+#login-screen.visible{display:flex !important}
+</style>
+
+<script>
+// ── CONFIG ──
+const API = window.location.hostname === 'localhost' || window.location.protocol === 'file:'
+  ? 'http://localhost:3001/api'
+  : 'https://aluen-api.onrender.com/api'; // ← reemplaza con tu URL de Render
+
+// ── AUTH ──
+const AUTH = {
+  get token(){ return sessionStorage.getItem('aluen_token'); },
+  set token(v){ sessionStorage.setItem('aluen_token', v); },
+  get user(){ return sessionStorage.getItem('aluen_user'); },
+  set user(v){ sessionStorage.setItem('aluen_user', v); },
+  clear(){ sessionStorage.removeItem('aluen_token'); sessionStorage.removeItem('aluen_user'); },
+  isLogged(){ return !!this.token; }
+};
+
+function togglePass(){
+  const p=document.getElementById('login-pass');
+  p.type = p.type==='password' ? 'text' : 'password';
+}
+
+async function doLogin(){
+  const btn=document.getElementById('login-btn');
+  const err=document.getElementById('login-error');
+  const user=document.getElementById('login-user').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  if(!user||!pass){ showLoginError('Completa usuario y contrasena'); return; }
+  btn.textContent='Verificando…'; btn.disabled=true; err.style.display='none';
+  try {
+    const res = await fetch(API+'/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username:user, password:pass})
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||'Error de autenticacion');
+    AUTH.token = data.token;
+    AUTH.user  = data.username;
+    hideLock();
+  } catch(e){
+    showLoginError(e.message);
+    btn.textContent='Ingresar'; btn.disabled=false;
+  }
+}
+
+function showLoginError(msg){
+  const err=document.getElementById('login-error');
+  err.textContent='⚠️ '+msg; err.style.display='block';
+  const btn=document.getElementById('login-btn');
+  btn.textContent='Ingresar'; btn.disabled=false;
+}
+
+function showLock(){
+  document.getElementById('login-screen').classList.add('visible');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>document.getElementById('login-user').focus(),100);
+}
+
+function hideLock(){
+  document.getElementById('login-screen').classList.remove('visible');
+  document.body.style.overflow='';
+  const el=document.getElementById('sb-username');
+  if(el) el.textContent=AUTH.user||'';
+  checkAPI(); renderDashboard();
+}
+
+function doLogout(){
+  AUTH.clear();
+  ['login-user','login-pass'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('login-error').style.display='none';
+  document.getElementById('login-btn').textContent='Ingresar';
+  document.getElementById('login-btn').disabled=false;
+  showLock();
+}
+
+// ── CACHE LOCAL ──
+let _productos = [];
+let _pedidos   = [];
+let _inventario= [];
+
+// ── API HELPER (con JWT) ──
+async function api(path, method='GET', body=null){
+  const headers = {'Content-Type':'application/json'};
+  if(AUTH.token) headers['Authorization'] = 'Bearer '+AUTH.token;
+  const opts = { method, headers };
+  if(body) opts.body = JSON.stringify(body);
+  const res = await fetch(API+path, opts);
+  if(res.status===401){ doLogout(); return; }
+  if(!res.ok) throw new Error(`Error ${res.status}`);
+  return res.json();
+}
+
+// ── HEALTH CHECK ──
+async function checkAPI(){
+  try {
+    const res = await fetch(API+'/auth/verify', {headers:{'Authorization':'Bearer '+(AUTH.token||'')}});
+    if(res.ok){
+      document.getElementById('api-dot').className = 'api-dot ok';
+      document.getElementById('api-status-txt').textContent = 'MongoDB conectado';
+    } else { throw new Error(); }
+  } catch {
+    document.getElementById('api-dot').className = 'api-dot err';
+    document.getElementById('api-status-txt').textContent = 'API desconectada';
+  }
+}
+
+// ── HELPERS ──
+const $ = id => document.getElementById(id);
+const fmtCOP = n => '$'+Math.round(n||0).toLocaleString('es-CO');
+const fmtDate = s => { if(!s) return ''; const[y,m,d]=(s.split('T')[0]).split('-'); return `${d}/${m}/${y}`; };
+const pillEstado = e => { const m={Pendiente:'pill-pend','En proceso':'pill-proc',Entregado:'pill-done',Cancelado:'pill-cancel'}; return `<span class="pill ${m[e]||''}">${e}</span>`; };
+const prodName = id => { const p = _productos.find(x=>x._id===id||x._id?.toString()===id); return p?p.nombre:'—'; };
+const prodPrecio = id => { const p = _productos.find(x=>x._id===id); return p?p.precio:0; };
+
+function toast(msg, ok=true){
+  const t=$('toast'); t.textContent=msg;
+  t.className='toast '+(ok?'toast-ok':'toast-err');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+function openModal(id){ $(id).classList.add('open'); }
+function closeModal(id){ $(id).classList.remove('open'); }
+
+// ── NAVEGACIÓN ──
+const VIEWS = {
+  dashboard: {title:'Dashboard', actions:''},
+  pedidos:   {title:'Pedidos',   actions:'<button class="btn btn-primary" onclick="openNewPedido()">+ Nuevo pedido</button>'},
+  ventas:    {title:'Registro de ventas', actions:''},
+  inventario:{title:'Inventario', actions:'<button class="btn btn-primary" onclick="openNewInv()">+ Agregar ítem</button>'},
+  productos: {title:'Catálogo de productos', actions:'<button class="btn btn-primary" onclick="openNewProd()">+ Nuevo producto</button>'},
+  kpis:      {title:'Indicadores KPI', actions:''},
+};
+
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
+  $('view-'+name).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(b=>{ if(b.getAttribute('onclick')===`showView('${name}')`) b.classList.add('active'); });
+  $('topbar-title').textContent = VIEWS[name].title;
+  $('topbar-actions').innerHTML = VIEWS[name].actions;
+  const r = {dashboard:renderDashboard, pedidos:renderPedidos, ventas:renderVentas, inventario:renderInventario, productos:renderProductos, kpis:renderKPIs};
+  if(r[name]) r[name]();
+}
+
+// ── DASHBOARD ──
+async function renderDashboard(){
+  try {
+    const [kpis, pedidos] = await Promise.all([api('/kpis'), api('/pedidos?limit=6')]);
+    _pedidos = await api('/pedidos');
+
+    $('dash-kpis').innerHTML = `
+      <div class="kpi-card k-gold"><div class="kpi-label">Ventas totales</div><div class="kpi-value">${fmtCOP(kpis.totalVentas)}</div><div class="kpi-sub">${kpis.unidades} unidades entregadas</div></div>
+      <div class="kpi-card k-green"><div class="kpi-label">Margen bruto</div><div class="kpi-value">${fmtCOP(kpis.margenBruto)}</div><div class="kpi-sub">${(kpis.margenPct||0).toFixed(1)}% sobre ventas</div></div>
+      <div class="kpi-card k-blue"><div class="kpi-label">Ticket promedio</div><div class="kpi-value">${fmtCOP(kpis.ticket)}</div><div class="kpi-sub">por pedido</div></div>
+      <div class="kpi-card k-purple"><div class="kpi-label">Clientes únicos</div><div class="kpi-value">${kpis.totalClientes}</div><div class="kpi-sub">${kpis.clientesRecurrentes} recurrentes</div></div>
+      <div class="kpi-card k-red"><div class="kpi-label">Pedidos activos</div><div class="kpi-value">${kpis.pending}</div><div class="kpi-sub">pendientes o en proceso</div></div>
+    `;
+
+    const vProd = Object.entries(kpis.ventasPorProducto||{}).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const maxP = vProd[0]?vProd[0][1]:1;
+    const bP = vProd.map(([n,v])=>`<div class="bar-row"><span class="bar-label" title="${n}">${n}</span><div class="bar-track"><div class="bar-fill" style="width:${(v/maxP*100).toFixed(1)}%"></div></div><span class="bar-val">${fmtCOP(v)}</span></div>`).join('');
+
+    const vCan = Object.entries(kpis.canales||{}).sort((a,b)=>b[1]-a[1]);
+    const maxC = vCan[0]?vCan[0][1]:1;
+    const bC = vCan.map(([c,v])=>`<div class="bar-row"><span class="bar-label">${c}</span><div class="bar-track"><div class="bar-fill" style="width:${(v/maxC*100).toFixed(1)}%;background:var(--smoke)"></div></div><span class="bar-val">${fmtCOP(v)}</span></div>`).join('');
+
+    $('dash-charts').innerHTML = `
+      <div class="chart-card"><div class="chart-title">Ventas por producto</div><div class="bar-chart">${bP||'<p style="font-size:12px;color:var(--smoke)">Sin datos aún</p>'}</div></div>
+      <div class="chart-card"><div class="chart-title">Ventas por canal</div><div class="bar-chart">${bC||'<p style="font-size:12px;color:var(--smoke)">Sin datos aún</p>'}</div></div>
+    `;
+
+    const recientes = _pedidos.slice(0,6);
+    $('dash-orders-body').innerHTML = recientes.length ? recientes.map(p=>`
+      <tr>
+        <td style="font-weight:500">${p.cliente}</td>
+        <td>${p.productoId?p.productoId.nombre:'—'}</td>
+        <td style="font-weight:500">${fmtCOP(p.total)}</td>
+        <td>${pillEstado(p.estado)}</td>
+        <td style="color:var(--smoke)">${fmtDate(p.fecha)}</td>
+      </tr>`).join('') : `<tr class="empty-row"><td colspan="5">Sin pedidos aún</td></tr>`;
+
+  } catch(e){ toast('Error cargando dashboard', false); console.error(e); }
+}
+
+// ── PEDIDOS ──
+async function renderPedidos(){
+  const q = ($('search-pedidos')||{value:''}).value.toLowerCase();
+  const est = ($('filter-estado')||{value:''}).value;
+  try {
+    _pedidos = await api('/pedidos');
+    let data = _pedidos;
+    if(q) data = data.filter(p=>p.cliente.toLowerCase().includes(q));
+    if(est) data = data.filter(p=>p.estado===est);
+
+    $('pedidos-body').innerHTML = data.length ? data.map(p=>`
+      <tr>
+        <td style="color:var(--smoke)">${fmtDate(p.fecha)}</td>
+        <td style="font-weight:500">${p.cliente}</td>
+        <td style="color:var(--smoke)">${p.tel}</td>
+        <td>${p.productoId?p.productoId.nombre:'—'}</td>
+        <td style="text-align:center">${p.cantidad}</td>
+        <td style="font-weight:500">${fmtCOP(p.total)}</td>
+        <td><span class="pill badge-neutral">${p.canal}</span></td>
+        <td>${pillEstado(p.estado)}</td>
+        <td>
+          <button class="act-btn" onclick="editPedido('${p._id}')">✏️</button>
+          <button class="act-btn" onclick="cycleEstado('${p._id}','${p.estado}')">🔄</button>
+          <button class="act-btn" onclick="deletePedido('${p._id}')">🗑️</button>
+        </td>
+      </tr>`).join('') : `<tr class="empty-row"><td colspan="9">Sin pedidos. Agrega el primero.</td></tr>`;
+  } catch(e){ toast('Error cargando pedidos', false); }
+}
+
+function calcPedidoTotal(){
+  const qty = parseFloat($('p-cantidad').value)||0;
+  const price = parseFloat($('p-precio').value)||0;
+  $('p-total').value = fmtCOP(qty*price);
+}
+
+async function fillProdSelect(selected=''){
+  _productos = await api('/productos');
+  const sel = $('p-producto');
+  sel.innerHTML = '<option value="">— Selecciona producto —</option>' + _productos.map(p=>`<option value="${p._id}" ${p._id===selected?'selected':''}>${p.nombre}</option>`).join('');
+  sel.onchange = ()=>{ const pr=_productos.find(x=>x._id===sel.value); if(pr){$('p-precio').value=pr.precio; calcPedidoTotal();} };
+}
+
+function openNewPedido(){
+  $('modal-pedido-title').textContent = 'Nuevo pedido';
+  $('pedido-edit-id').value = '';
+  $('p-fecha').value = new Date().toISOString().split('T')[0];
+  $('p-estado').value = 'Pendiente';
+  ['p-cliente','p-telefono','p-precio','p-notas'].forEach(id=>$(id).value='');
+  $('p-cantidad').value = 1;
+  $('p-total').value = '$0';
+  fillProdSelect();
+  openModal('modal-pedido');
+}
+
+async function editPedido(id){
+  const p = _pedidos.find(x=>x._id===id); if(!p) return;
+  $('modal-pedido-title').textContent = 'Editar pedido';
+  $('pedido-edit-id').value = id;
+  $('p-fecha').value = (p.fecha||'').split('T')[0];
+  $('p-estado').value = p.estado;
+  $('p-cliente').value = p.cliente;
+  $('p-telefono').value = p.tel;
+  $('p-cantidad').value = p.cantidad;
+  $('p-precio').value = p.precio;
+  $('p-canal').value = p.canal;
+  $('p-notas').value = p.notas;
+  $('p-total').value = fmtCOP(p.total);
+  await fillProdSelect(p.productoId?._id||p.productoId);
+  openModal('modal-pedido');
+}
+
+async function savePedido(){
+  const cliente = $('p-cliente').value.trim();
+  const productoId = $('p-producto').value;
+  if(!cliente||!productoId){ toast('Completa cliente y producto', false); return; }
+  const qty = parseFloat($('p-cantidad').value)||1;
+  const precio = parseFloat($('p-precio').value)||0;
+  const body = { fecha:$('p-fecha').value, cliente, tel:$('p-telefono').value, productoId, cantidad:qty, precio, total:qty*precio, canal:$('p-canal').value, estado:$('p-estado').value, notas:$('p-notas').value };
+  const editId = $('pedido-edit-id').value;
+  try {
+    if(editId) await api('/pedidos/'+editId, 'PUT', body);
+    else await api('/pedidos', 'POST', body);
+    closeModal('modal-pedido');
+    await renderPedidos();
+    toast(editId ? 'Pedido actualizado ✓' : 'Pedido registrado ✓');
+  } catch(e){ toast('Error guardando pedido', false); }
+}
+
+async function cycleEstado(id, current){
+  const states = ['Pendiente','En proceso','Entregado','Cancelado'];
+  const next = states[(states.indexOf(current)+1)%states.length];
+  try {
+    await api('/pedidos/'+id, 'PUT', {estado:next});
+    await renderPedidos();
+    toast('Estado → '+next);
+  } catch(e){ toast('Error actualizando estado', false); }
+}
+
+async function deletePedido(id){
+  if(!confirm('¿Eliminar este pedido?')) return;
+  try { await api('/pedidos/'+id, 'DELETE'); await renderPedidos(); toast('Pedido eliminado'); }
+  catch(e){ toast('Error eliminando', false); }
+}
+
+// ── VENTAS ──
+async function renderVentas(){
+  const mes = ($('filter-mes')||{value:''}).value;
+  const canal = ($('filter-canal-v')||{value:''}).value;
+  try {
+    _pedidos = await api('/pedidos');
+    let data = _pedidos.filter(p=>p.estado==='Entregado');
+    if(mes) data = data.filter(p=>(p.fecha||'').startsWith(mes));
+    if(canal) data = data.filter(p=>p.canal===canal);
+
+    const totalV = data.reduce((s,p)=>s+p.total,0);
+    const unidades = data.reduce((s,p)=>s+p.cantidad,0);
+    const ticket = data.length ? totalV/data.length : 0;
+
+    $('ventas-kpis').innerHTML = `
+      <div class="kpi-card k-gold"><div class="kpi-label">Total período</div><div class="kpi-value">${fmtCOP(totalV)}</div><div class="kpi-sub">${data.length} ventas</div></div>
+      <div class="kpi-card k-blue"><div class="kpi-label">Unidades</div><div class="kpi-value">${unidades}</div><div class="kpi-sub">velas vendidas</div></div>
+      <div class="kpi-card k-green"><div class="kpi-label">Ticket promedio</div><div class="kpi-value">${fmtCOP(ticket)}</div><div class="kpi-sub">por pedido</div></div>
+    `;
+
+    $('ventas-body').innerHTML = data.length ? data.map(p=>`
+      <tr>
+        <td style="color:var(--smoke)">${fmtDate(p.fecha)}</td>
+        <td style="font-weight:500">${p.cliente}</td>
+        <td>${p.productoId?p.productoId.nombre:'—'}</td>
+        <td style="text-align:center">${p.cantidad}</td>
+        <td>${fmtCOP(p.precio)}</td>
+        <td style="font-weight:600">${fmtCOP(p.total)}</td>
+        <td><span class="pill badge-neutral">${p.canal}</span></td>
+      </tr>`).join('') : `<tr class="empty-row"><td colspan="7">Sin ventas en este período</td></tr>`;
+
+    // poblar meses
+    const meses = [...new Set(_pedidos.filter(p=>p.estado==='Entregado').map(p=>(p.fecha||'').slice(0,7)))].sort().reverse();
+    const fm = $('filter-mes');
+    if(fm && fm.options.length <= 1){
+      meses.forEach(m=>{ const o=document.createElement('option'); o.value=m; const[y,mo]=m.split('-'); const nm=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']; o.textContent=`${nm[+mo]} ${y}`; fm.appendChild(o); });
+    }
+  } catch(e){ toast('Error cargando ventas', false); }
+}
+
+// ── INVENTARIO ──
+async function renderInventario(){
+  const cat = ($('filter-cat-inv')||{value:''}).value;
+  try {
+    _inventario = await api('/inventario');
+    let data = _inventario;
+    if(cat) data = data.filter(i=>i.cat===cat);
+
+    $('inv-grid').innerHTML = data.length ? data.map(item=>{
+      const out = item.qty===0;
+      const low = item.qty<=item.min && !out;
+      const st = out ? '<span class="pill pill-out">Sin stock</span>' : low ? '<span class="pill pill-low">Stock bajo</span>' : '<span class="pill pill-ok">OK</span>';
+      return `<div class="inv-card">
+        <div class="inv-card-name">${item.nombre}</div>
+        <div class="inv-card-cat">${item.cat}</div>
+        <div class="inv-qty" style="color:${out?'var(--red)':low?'var(--amber)':'var(--black)'}">${item.qty}</div>
+        <div class="inv-unit">${item.unidad} · mín ${item.min} · ${fmtCOP(item.costo)}/u</div>
+        <div style="margin-top:8px">${st}</div>
+        <div class="inv-card-actions">
+          <button class="btn btn-ghost btn-sm" onclick="ajustarQty('${item._id}',-1)">−</button>
+          <button class="btn btn-gold btn-sm" onclick="ajustarQty('${item._id}',1)">+</button>
+          <button class="btn btn-ghost btn-sm" onclick="editInv('${item._id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteInv('${item._id}')">🗑</button>
+        </div>
+      </div>`;
+    }).join('') : `<p style="color:var(--smoke);font-size:13px">Sin ítems en esta categoría.</p>`;
+  } catch(e){ toast('Error cargando inventario', false); }
+}
+
+async function ajustarQty(id, delta){
+  const item = _inventario.find(i=>i._id===id); if(!item) return;
+  const newQty = Math.max(0, item.qty+delta);
+  try { await api('/inventario/'+id, 'PUT', {qty:newQty}); await renderInventario(); }
+  catch(e){ toast('Error actualizando stock', false); }
+}
+
+function openNewInv(){
+  $('modal-inv-title').textContent = 'Nuevo ítem de inventario';
+  $('inv-edit-id').value = '';
+  ['inv-nombre','inv-unidad','inv-costo'].forEach(id=>$(id).value='');
+  $('inv-qty').value=0; $('inv-min').value=5; $('inv-cat').value='Materia prima';
+  openModal('modal-inventario');
+}
+
+function editInv(id){
+  const item = _inventario.find(x=>x._id===id); if(!item) return;
+  $('modal-inv-title').textContent = 'Editar ítem';
+  $('inv-edit-id').value = id;
+  $('inv-nombre').value=item.nombre; $('inv-cat').value=item.cat;
+  $('inv-unidad').value=item.unidad; $('inv-qty').value=item.qty;
+  $('inv-min').value=item.min; $('inv-costo').value=item.costo;
+  openModal('modal-inventario');
+}
+
+async function saveInventario(){
+  const nombre = $('inv-nombre').value.trim();
+  if(!nombre){ toast('Ingresa el nombre del ítem', false); return; }
+  const editId = $('inv-edit-id').value;
+  const body = {nombre, cat:$('inv-cat').value, unidad:$('inv-unidad').value, qty:parseFloat($('inv-qty').value)||0, min:parseFloat($('inv-min').value)||5, costo:parseFloat($('inv-costo').value)||0};
+  try {
+    if(editId) await api('/inventario/'+editId, 'PUT', body);
+    else await api('/inventario', 'POST', body);
+    closeModal('modal-inventario'); await renderInventario(); toast('Inventario actualizado ✓');
+  } catch(e){ toast('Error guardando', false); }
+}
+
+async function deleteInv(id){
+  if(!confirm('¿Eliminar este ítem?')) return;
+  try { await api('/inventario/'+id, 'DELETE'); await renderInventario(); toast('Ítem eliminado'); }
+  catch(e){ toast('Error eliminando', false); }
+}
+
+// ── PRODUCTOS ──
+async function renderProductos(){
+  try {
+    _productos = await api('/productos');
+    $('productos-body').innerHTML = _productos.length ? _productos.map(p=>{
+      const m = p.precio ? ((p.precio-p.costo)/p.precio*100) : 0;
+      return `<tr>
+        <td style="font-weight:500">${p.nombre}</td>
+        <td style="color:var(--smoke)">${p.cat}</td>
+        <td>${fmtCOP(p.costo)}</td>
+        <td style="font-weight:600">${fmtCOP(p.precio)}</td>
+        <td><span class="pill ${m>=50?'pill-ok':m>=30?'pill-low':'pill-cancel'}">${m.toFixed(0)}%</span></td>
+        <td>
+          <button class="act-btn" onclick="editProd('${p._id}')">✏️</button>
+          <button class="act-btn" onclick="deleteProd('${p._id}')">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('') : `<tr class="empty-row"><td colspan="6">Agrega tu primer producto</td></tr>`;
+  } catch(e){ toast('Error cargando productos', false); }
+}
+
+function calcMargen(){
+  const c=parseFloat($('prod-costo').value)||0;
+  const v=parseFloat($('prod-precio').value)||0;
+  $('prod-margen').value = v ? `${((v-c)/v*100).toFixed(1)}% — ganancia ${fmtCOP(v-c)} por unidad` : '—';
+}
+
+function openNewProd(){
+  $('modal-prod-title').textContent = 'Nuevo producto';
+  $('prod-edit-id').value = '';
+  ['prod-nombre','prod-cat','prod-costo','prod-precio','prod-desc'].forEach(id=>$(id).value='');
+  $('prod-margen').value = '';
+  openModal('modal-producto');
+}
+
+function editProd(id){
+  const p = _productos.find(x=>x._id===id); if(!p) return;
+  $('modal-prod-title').textContent = 'Editar producto';
+  $('prod-edit-id').value = id;
+  $('prod-nombre').value=p.nombre; $('prod-cat').value=p.cat;
+  $('prod-costo').value=p.costo; $('prod-precio').value=p.precio; $('prod-desc').value=p.desc;
+  calcMargen(); openModal('modal-producto');
+}
+
+async function saveProducto(){
+  const nombre = $('prod-nombre').value.trim();
+  if(!nombre){ toast('Ingresa el nombre del producto', false); return; }
+  const editId = $('prod-edit-id').value;
+  const body = {nombre, cat:$('prod-cat').value, costo:parseFloat($('prod-costo').value)||0, precio:parseFloat($('prod-precio').value)||0, desc:$('prod-desc').value};
+  try {
+    if(editId) await api('/productos/'+editId, 'PUT', body);
+    else await api('/productos', 'POST', body);
+    closeModal('modal-producto'); await renderProductos(); toast('Producto guardado ✓');
+  } catch(e){ toast('Error guardando producto', false); }
+}
+
+async function deleteProd(id){
+  if(!confirm('¿Eliminar este producto?')) return;
+  try { await api('/productos/'+id, 'DELETE'); await renderProductos(); toast('Producto eliminado'); }
+  catch(e){ toast('Error eliminando', false); }
+}
+
+// ── KPIs ──
+async function renderKPIs(){
+  try {
+    const [kpis, inv, prods] = await Promise.all([api('/kpis'), api('/inventario'), api('/productos')]);
+
+    $('kpi-grid-full').innerHTML = `
+      <div class="kpi-card k-gold"><div class="kpi-label">Ingresos totales</div><div class="kpi-value">${fmtCOP(kpis.totalVentas)}</div><div class="kpi-sub">ventas entregadas</div></div>
+      <div class="kpi-card k-green"><div class="kpi-label">Ganancia bruta</div><div class="kpi-value">${fmtCOP(kpis.margenBruto)}</div><div class="kpi-sub">${(kpis.margenPct||0).toFixed(1)}% de margen</div></div>
+      <div class="kpi-card k-blue"><div class="kpi-label">Unidades vendidas</div><div class="kpi-value">${kpis.unidades}</div><div class="kpi-sub">velas entregadas</div></div>
+      <div class="kpi-card k-purple"><div class="kpi-label">Ticket promedio</div><div class="kpi-value">${fmtCOP(kpis.ticket)}</div><div class="kpi-sub">por pedido</div></div>
+      <div class="kpi-card k-gold"><div class="kpi-label">Clientes totales</div><div class="kpi-value">${kpis.totalClientes}</div><div class="kpi-sub">${kpis.clientesRecurrentes} recurrentes</div></div>
+      <div class="kpi-card k-green"><div class="kpi-label">Pedidos activos</div><div class="kpi-value">${kpis.pending}</div><div class="kpi-sub">en proceso o pendientes</div></div>
+      <div class="kpi-card k-blue"><div class="kpi-label">Alertas stock</div><div class="kpi-value">${kpis.stockBajo}</div><div class="kpi-sub">ítems bajo mínimo</div></div>
+    `;
+
+    const vP = Object.entries(kpis.ventasPorProducto||{}).sort((a,b)=>b[1]-a[1]);
+    const mP = vP[0]?vP[0][1]:1;
+    const bP = vP.map(([n,v])=>`<div class="bar-row"><span class="bar-label" title="${n}">${n}</span><div class="bar-track"><div class="bar-fill" style="width:${(v/mP*100).toFixed(1)}%"></div></div><span class="bar-val">${fmtCOP(v)}</span></div>`).join('');
+
+    const vC = Object.entries(kpis.canales||{}).sort((a,b)=>b[1]-a[1]);
+    const mC = vC[0]?vC[0][1]:1;
+    const bC = vC.map(([c,v])=>`<div class="bar-row"><span class="bar-label">${c}</span><div class="bar-track"><div class="bar-fill" style="width:${(v/mC*100).toFixed(1)}%;background:var(--green)"></div></div><span class="bar-val">${fmtCOP(v)}</span></div>`).join('');
+
+    const bM = prods.map(p=>{ const m=p.precio?((p.precio-p.costo)/p.precio*100):0; return`<div class="bar-row"><span class="bar-label" title="${p.nombre}">${p.nombre}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.min(m,100).toFixed(1)}%;background:${m>=50?'var(--green)':m>=30?'var(--gold)':'var(--red)'}"></div></div><span class="bar-val">${m.toFixed(0)}%</span></div>`; }).join('');
+
+    const bS = inv.filter(i=>['Materia prima','Producto terminado'].includes(i.cat)).map(i=>{ const pct=i.min?Math.min(i.qty/i.min*50,100):100; return`<div class="bar-row"><span class="bar-label" title="${i.nombre}">${i.nombre}</span><div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${i.qty===0?'var(--red)':i.qty<=i.min?'var(--amber)':'var(--blue)'}"></div></div><span class="bar-val">${i.qty} ${i.unidad}</span></div>`; }).join('');
+
+    $('kpi-charts').innerHTML = `
+      <div class="chart-card"><div class="chart-title">Ingresos por producto</div><div class="bar-chart">${bP||'Sin datos'}</div></div>
+      <div class="chart-card"><div class="chart-title">Ingresos por canal</div><div class="bar-chart">${bC||'Sin datos'}</div></div>
+      <div class="chart-card"><div class="chart-title">Margen por producto</div><div class="bar-chart">${bM||'Sin datos'}</div></div>
+      <div class="chart-card"><div class="chart-title">Estado del stock</div><div class="bar-chart">${bS||'Sin datos'}</div></div>
+    `;
+  } catch(e){ toast('Error cargando KPIs', false); }
+}
+
+// ── FECHA ──
+function updateDate(){
+  const now=new Date(); const dias=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  $('sb-date').innerHTML=`${dias[now.getDay()]} ${now.getDate()} ${meses[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+// ── INIT ──
+updateDate();
+if(AUTH.isLogged()){
+  const el=document.getElementById('sb-username');
+  if(el) el.textContent=AUTH.user||'';
+  checkAPI();
+  renderDashboard();
+} else {
+  showLock();
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); });
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+</script>
+</body>
+</html>
